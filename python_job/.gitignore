@@ -1,0 +1,14 @@
+.env
+__pycache__/
+*.pyc
+
+input/*.xls
+input/*.xlsx
+!input/.gitkeep
+
+logs/*.log
+logs/*.csv
+!logs/.gitkeep
+
+state/*.json
+!state/.gitkeep
