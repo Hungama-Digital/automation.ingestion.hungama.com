@@ -27,11 +27,21 @@ function createConfig(env, helpers = {}) {
     outputDir: expand(env.OUTPUT_DIR || joinPath(home(), 'Downloads')),
     outputExt: env.OUTPUT_EXT || 'wav',
     missingLogDir: expand(env.MISSING_LOG_DIR || './logs'),
+    sftpHost: env.SFTP_HOST,
+    sftpPort: toPort(env.SFTP_PORT, 22),
+    sftpUsername: env.SFTP_USERNAME,
+    sftpPassword: env.SFTP_PASSWORD,
+    sftpRemoteDir: env.SFTP_REMOTE_DIR || '30 Sec Cut',
     ffmpegPath: env.FFMPEG_PATH || 'ffmpeg',
     ffmpegArgs: (env.FFMPEG_ARGS || '-t 00:00:30.0 -ar 8000 -ac 1 -c:a pcm_alaw')
       .split(' ')
       .filter(Boolean)
   };
+}
+
+function toPort(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function validateConfig(config) {
@@ -40,6 +50,10 @@ function validateConfig(config) {
   if (!config.solrUser || !config.solrPass) throw new Error('SOLR_USERNAME and SOLR_PASSWORD are required');
   if (!config.mdnBaseUrl) throw new Error('MDN_BASE_URL is required');
   if (!config.mdnAuthHeader) throw new Error('MDN_AUTH_HEADER is required');
+  if (!config.sftpHost) throw new Error('SFTP_HOST is required');
+  if (!config.sftpUsername) throw new Error('SFTP_USERNAME is required');
+  if (!config.sftpPassword) throw new Error('SFTP_PASSWORD is required');
+  if (!config.sftpRemoteDir) throw new Error('SFTP_REMOTE_DIR is required');
 }
 
 module.exports = { createConfig, validateConfig };

@@ -1,6 +1,5 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('node:path');
 const { createProcessor } = require('../src/lib/processor');
 
 test('processRow logs missing media and skips', async () => {
@@ -32,14 +31,13 @@ test('processRow logs missing media and skips', async () => {
   assert.ok(logs[0].startsWith('MISSING_MEDIA_STRING'));
 });
 
-test('processRow downloads, transcodes, and cleans up', async () => {
-  const calls = { download: 0, transcode: 0, cleanup: 0 };
+test('processRow downloads, transcodes, uploads, and cleans up', async () => {
+  const calls = { download: 0, transcode: 0, upload: 0, cleanup: 0 };
   const processRow = createProcessor(
     {
       mediaPrefix: 'https://media.hungama.co',
       mediaSuffixes: ['_320.mp3'],
       missingLogPath: '/tmp/output.txt',
-      outputDir: '/tmp',
       outputExt: 'wav'
     },
     {
@@ -49,11 +47,17 @@ test('processRow downloads, transcodes, and cleans up', async () => {
       fetchMdnUrl: async () => 'https://media.hungama.com/file.mp3',
       downloadToTemp: async () => {
         calls.download++;
-        return '/tmp/in.mp3';
+        return '/tmp/in_raw.mp3';
       },
+      buildStagingPath: (outName) => `/tmp/staging_${outName}`,
       transcodeToOutput: async (_in, out) => {
         calls.transcode++;
-        assert.equal(out, path.join('/tmp', 'song.wav'));
+        assert.equal(out, '/tmp/staging_song.wav');
+      },
+      uploadFile: async (localPath, remoteName) => {
+        calls.upload++;
+        assert.equal(localPath, '/tmp/staging_song.wav');
+        assert.equal(remoteName, 'song.wav');
       },
       cleanupTemp: () => {
         calls.cleanup++;
@@ -67,7 +71,8 @@ test('processRow downloads, transcodes, and cleans up', async () => {
   assert.equal(status, 'SUCCESS');
   assert.equal(calls.download, 1);
   assert.equal(calls.transcode, 1);
-  assert.equal(calls.cleanup, 1);
+  assert.equal(calls.upload, 1);
+  assert.equal(calls.cleanup, 2);
 });
 
 test('processRow logs missing filename', async () => {
@@ -77,7 +82,6 @@ test('processRow logs missing filename', async () => {
       mediaPrefix: 'https://media.hungama.co',
       mediaSuffixes: ['_320.mp3'],
       missingLogPath: '/tmp/output.txt',
-      outputDir: '/tmp',
       outputExt: 'wav'
     },
     {
@@ -86,7 +90,9 @@ test('processRow logs missing filename', async () => {
       extractToken: () => '763',
       fetchMdnUrl: async () => 'https://media.hungama.com/file.mp3',
       downloadToTemp: async () => '/tmp/in.mp3',
+      buildStagingPath: () => '/tmp/staging.wav',
       transcodeToOutput: async () => null,
+      uploadFile: async () => null,
       cleanupTemp: () => null,
       buildOutputName: () => null,
       appendLog: (_path, line) => logs.push(line)

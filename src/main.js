@@ -15,6 +15,7 @@ const { selectMediaString, extractToken } = require('./lib/media');
 const { createDownloader } = require('./lib/download');
 const { createTranscoder } = require('./lib/transcode');
 const { createProcessor } = require('./lib/processor');
+const { createSftpUploader } = require('./lib/sftp-uploader');
 const { mapWithConcurrency } = require('./lib/concurrency');
 const { buildOutputName } = require('./lib/filename');
 const { formatLotLog, appendLog } = require('./lib/logger');
@@ -32,10 +33,6 @@ function loadRows(filePath) {
 }
 
 async function main() {
-  if (!fs.existsSync(config.outputDir)) {
-    fs.mkdirSync(config.outputDir, { recursive: true });
-  }
-
   const logDir = path.isAbsolute(config.missingLogDir)
     ? config.missingLogDir
     : path.resolve(process.cwd(), config.missingLogDir);
@@ -76,13 +73,25 @@ async function main() {
     ffmpegArgs: config.ffmpegArgs
   });
 
+  const sftpUploader = createSftpUploader({
+    host: config.sftpHost,
+    port: config.sftpPort,
+    username: config.sftpUsername,
+    password: config.sftpPassword,
+    remoteDir: config.sftpRemoteDir
+  });
+  await sftpUploader.connect();
+
   const processRow = createProcessor(config, {
     fetchSolrText: solrClient.fetchSolrText,
     selectMediaString,
     extractToken,
     fetchMdnUrl: mdnClient.fetchMdnUrl,
     downloadToTemp: downloader.downloadToTemp,
+    buildStagingPath: (outName) =>
+      path.join(os.tmpdir(), `transcoded_${Date.now()}_${Math.random().toString(16).slice(2)}_${outName}`),
     transcodeToOutput,
+    uploadFile: sftpUploader.uploadFile,
     cleanupTemp: (tempPath) => {
       if (tempPath && fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
     },
@@ -100,18 +109,22 @@ async function main() {
   appendLog(config.missingLogPath, `RUN_START | rows=${rows.length} | lots=${batches.length} | batch_size=${config.batchSize}`);
   console.log(formatRunHeader(rows.length, batches.length, config.batchSize));
 
-  const summary = createSummary(rows.length);
-  let lot = 1;
-  for (const batch of batches) {
-    const statuses = await mapWithConcurrency(batch, config.concurrency, processRow);
-    updateSummary(summary, statuses);
-    console.log(formatLotLog(lot, config.batchSize));
-    lot++;
-  }
+  try {
+    const summary = createSummary(rows.length);
+    let lot = 1;
+    for (const batch of batches) {
+      const statuses = await mapWithConcurrency(batch, config.concurrency, processRow);
+      updateSummary(summary, statuses);
+      console.log(formatLotLog(lot, config.batchSize));
+      lot++;
+    }
 
-  const summaryLine = formatRunSummary(summary);
-  console.log(summaryLine);
-  appendLog(config.missingLogPath, `RUN_SUMMARY | ${summaryLine}`);
+    const summaryLine = formatRunSummary(summary);
+    console.log(summaryLine);
+    appendLog(config.missingLogPath, `RUN_SUMMARY | ${summaryLine}`);
+  } finally {
+    await sftpUploader.close();
+  }
 }
 
 main().catch((err) => {

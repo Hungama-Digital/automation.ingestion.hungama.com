@@ -1,5 +1,3 @@
-const path = require('node:path');
-
 function createProcessor(config, deps) {
   const {
     fetchSolrText,
@@ -7,7 +5,9 @@ function createProcessor(config, deps) {
     extractToken,
     fetchMdnUrl,
     downloadToTemp,
+    buildStagingPath,
     transcodeToOutput,
+    uploadFile,
     cleanupTemp,
     buildOutputName,
     appendLog
@@ -42,12 +42,14 @@ function createProcessor(config, deps) {
       }
 
       const tempPath = await downloadToTemp(mdnUrl);
+      const stagingPath = buildStagingPath(outName);
       try {
-        const outPath = path.join(config.outputDir, outName);
-        await transcodeToOutput(tempPath, outPath);
+        await transcodeToOutput(tempPath, stagingPath);
+        await uploadFile(stagingPath, outName);
         return 'SUCCESS';
       } finally {
         cleanupTemp(tempPath);
+        cleanupTemp(stagingPath);
       }
     } catch (err) {
       appendLog(config.missingLogPath, `ERROR | content_id=${trackContentId} | file_name=${fileRename} | ${err.message}`);
