@@ -27,11 +27,13 @@ function createConfig(env, helpers = {}) {
     outputDir: expand(env.OUTPUT_DIR || joinPath(home(), 'Downloads')),
     outputExt: env.OUTPUT_EXT || 'wav',
     missingLogDir: expand(env.MISSING_LOG_DIR || './logs'),
-    sftpHost: env.SFTP_HOST,
-    sftpPort: toPort(env.SFTP_PORT, 22),
-    sftpUsername: env.SFTP_USERNAME,
-    sftpPassword: env.SFTP_PASSWORD,
-    sftpRemoteDir: env.SFTP_REMOTE_DIR || '30 Sec Cut',
+    uploadProtocol: (env.UPLOAD_PROTOCOL || 'ftp').trim().toLowerCase(),
+    uploadHost: env.FTP_HOST || env.SFTP_HOST,
+    uploadPort: toPort(env.FTP_PORT || env.SFTP_PORT, 21),
+    uploadUsername: env.FTP_USERNAME || env.SFTP_USERNAME,
+    uploadPassword: env.FTP_PASSWORD || env.SFTP_PASSWORD,
+    uploadRemoteDir: env.FTP_REMOTE_DIR || env.SFTP_REMOTE_DIR || '30 Sec Cut',
+    ftpSecure: toBoolean(env.FTP_SECURE, true),
     ffmpegPath: env.FFMPEG_PATH || 'ffmpeg',
     ffmpegArgs: (env.FFMPEG_ARGS || '-t 00:00:30.0 -ar 8000 -ac 1 -c:a pcm_alaw')
       .split(' ')
@@ -44,16 +46,23 @@ function toPort(value, fallback) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function toBoolean(value, fallback) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const normalized = String(value).trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+}
+
 function validateConfig(config) {
   if (!config.excelPath) throw new Error('EXCEL_PATH is required');
   if (!config.solrBaseUrl) throw new Error('SOLR_BASE_URL is required');
   if (!config.solrUser || !config.solrPass) throw new Error('SOLR_USERNAME and SOLR_PASSWORD are required');
   if (!config.mdnBaseUrl) throw new Error('MDN_BASE_URL is required');
   if (!config.mdnAuthHeader) throw new Error('MDN_AUTH_HEADER is required');
-  if (!config.sftpHost) throw new Error('SFTP_HOST is required');
-  if (!config.sftpUsername) throw new Error('SFTP_USERNAME is required');
-  if (!config.sftpPassword) throw new Error('SFTP_PASSWORD is required');
-  if (!config.sftpRemoteDir) throw new Error('SFTP_REMOTE_DIR is required');
+  if (!['ftp', 'sftp'].includes(config.uploadProtocol)) throw new Error('UPLOAD_PROTOCOL must be ftp or sftp');
+  if (!config.uploadHost) throw new Error('FTP_HOST/SFTP_HOST is required');
+  if (!config.uploadUsername) throw new Error('FTP_USERNAME/SFTP_USERNAME is required');
+  if (!config.uploadPassword) throw new Error('FTP_PASSWORD/SFTP_PASSWORD is required');
+  if (!config.uploadRemoteDir) throw new Error('FTP_REMOTE_DIR/SFTP_REMOTE_DIR is required');
 }
 
 module.exports = { createConfig, validateConfig };

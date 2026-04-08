@@ -8,6 +8,8 @@ This repository is created for the Ingestion automation work flow share by Talha
 3. Install dependencies: `npm install`
 4. Run: `npm start`
 
-Transcoded files are uploaded to SFTP folder set in `SFTP_REMOTE_DIR` (for example `30 Sec Cut`).
+Transcoded files are uploaded to remote folder set in `FTP_REMOTE_DIR` (for example `30 Sec Cut`).
+Use `UPLOAD_PROTOCOL=ftp` for FTP/FTPS (default) or `UPLOAD_PROTOCOL=sftp` for SSH SFTP.
+For FTPS toggle `FTP_SECURE=true/false`.
 Missing/error entries are logged to a timestamped file in the project `logs` folder (for example `logs/missing_entries_20260408_162530.log`).
 Set `MISSING_LOG_DIR` in `.env` to choose a different log directory.

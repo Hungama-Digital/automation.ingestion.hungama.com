@@ -15,7 +15,7 @@ const { selectMediaString, extractToken } = require('./lib/media');
 const { createDownloader } = require('./lib/download');
 const { createTranscoder } = require('./lib/transcode');
 const { createProcessor } = require('./lib/processor');
-const { createSftpUploader } = require('./lib/sftp-uploader');
+const { createUploader } = require('./lib/uploader');
 const { mapWithConcurrency } = require('./lib/concurrency');
 const { buildOutputName } = require('./lib/filename');
 const { formatLotLog, appendLog } = require('./lib/logger');
@@ -73,14 +73,18 @@ async function main() {
     ffmpegArgs: config.ffmpegArgs
   });
 
-  const sftpUploader = createSftpUploader({
-    host: config.sftpHost,
-    port: config.sftpPort,
-    username: config.sftpUsername,
-    password: config.sftpPassword,
-    remoteDir: config.sftpRemoteDir
-  });
-  await sftpUploader.connect();
+  const uploader = createUploader(config);
+  try {
+    await uploader.connect();
+  } catch (err) {
+    const hint =
+      config.uploadProtocol === 'sftp'
+        ? 'SFTP handshake failed. Verify UPLOAD_PROTOCOL, port, and SSH/SFTP access.'
+        : 'FTP/FTPS connect failed. Verify FTP_SECURE, port, and server access.';
+    throw new Error(
+      `Upload connection failed (${config.uploadProtocol}) to ${config.uploadHost}:${config.uploadPort}. ${hint} Root error: ${err.message}`
+    );
+  }
 
   const processRow = createProcessor(config, {
     fetchSolrText: solrClient.fetchSolrText,
@@ -91,7 +95,7 @@ async function main() {
     buildStagingPath: (outName) =>
       path.join(os.tmpdir(), `transcoded_${Date.now()}_${Math.random().toString(16).slice(2)}_${outName}`),
     transcodeToOutput,
-    uploadFile: sftpUploader.uploadFile,
+    uploadFile: uploader.uploadFile,
     cleanupTemp: (tempPath) => {
       if (tempPath && fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
     },
@@ -123,7 +127,7 @@ async function main() {
     console.log(summaryLine);
     appendLog(config.missingLogPath, `RUN_SUMMARY | ${summaryLine}`);
   } finally {
-    await sftpUploader.close();
+    await uploader.close();
   }
 }
 
