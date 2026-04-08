@@ -26,7 +26,8 @@ test('processRow logs missing media and skips', async () => {
     }
   );
 
-  await processRow({ trackContentId: '1', fileRename: 'song' });
+  const status = await processRow({ trackContentId: '1', fileRename: 'song' });
+  assert.equal(status, 'MISSING_MEDIA_STRING');
   assert.equal(logs.length, 1);
   assert.ok(logs[0].startsWith('MISSING_MEDIA_STRING'));
 });
@@ -62,7 +63,8 @@ test('processRow downloads, transcodes, and cleans up', async () => {
     }
   );
 
-  await processRow({ trackContentId: '1', fileRename: 'song' });
+  const status = await processRow({ trackContentId: '1', fileRename: 'song' });
+  assert.equal(status, 'SUCCESS');
   assert.equal(calls.download, 1);
   assert.equal(calls.transcode, 1);
   assert.equal(calls.cleanup, 1);
@@ -91,7 +93,8 @@ test('processRow logs missing filename', async () => {
     }
   );
 
-  await processRow({ trackContentId: '1', fileRename: '' });
+  const status = await processRow({ trackContentId: '1', fileRename: '' });
+  assert.equal(status, 'MISSING_FILENAME');
   assert.equal(logs.length, 1);
   assert.ok(logs[0].startsWith('MISSING_FILENAME'));
 });

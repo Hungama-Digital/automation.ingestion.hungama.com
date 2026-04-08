@@ -18,6 +18,7 @@ const { createProcessor } = require('./lib/processor');
 const { mapWithConcurrency } = require('./lib/concurrency');
 const { buildOutputName } = require('./lib/filename');
 const { formatLotLog, appendLog } = require('./lib/logger');
+const { createSummary, updateSummary, formatRunHeader, formatRunSummary } = require('./lib/summary');
 
 const config = createConfig(process.env);
 validateConfig(config);
@@ -85,12 +86,18 @@ async function main() {
     batches.push(rows.slice(i, i + config.batchSize));
   }
 
+  console.log(formatRunHeader(rows.length, batches.length, config.batchSize));
+
+  const summary = createSummary(rows.length);
   let lot = 1;
   for (const batch of batches) {
-    await mapWithConcurrency(batch, config.concurrency, processRow);
+    const statuses = await mapWithConcurrency(batch, config.concurrency, processRow);
+    updateSummary(summary, statuses);
     console.log(formatLotLog(lot, config.batchSize));
     lot++;
   }
+
+  console.log(formatRunSummary(summary));
 }
 
 main().catch((err) => {
