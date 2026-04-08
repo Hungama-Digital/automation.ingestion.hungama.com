@@ -35,6 +35,16 @@ async function main() {
     fs.mkdirSync(config.outputDir, { recursive: true });
   }
 
+  const logDir = path.dirname(config.missingLogPath);
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
+  if (config.clearMissingLogOnStart) {
+    fs.writeFileSync(config.missingLogPath, '', 'utf8');
+  } else if (!fs.existsSync(config.missingLogPath)) {
+    fs.writeFileSync(config.missingLogPath, '', 'utf8');
+  }
+
   const solrClient = createSolrClient({
     baseUrl: config.solrBaseUrl,
     username: config.solrUser,
@@ -86,6 +96,8 @@ async function main() {
     batches.push(rows.slice(i, i + config.batchSize));
   }
 
+  console.log(`Missing/error log file: ${config.missingLogPath}`);
+  appendLog(config.missingLogPath, `RUN_START | rows=${rows.length} | lots=${batches.length} | batch_size=${config.batchSize}`);
   console.log(formatRunHeader(rows.length, batches.length, config.batchSize));
 
   const summary = createSummary(rows.length);
@@ -97,7 +109,9 @@ async function main() {
     lot++;
   }
 
-  console.log(formatRunSummary(summary));
+  const summaryLine = formatRunSummary(summary);
+  console.log(summaryLine);
+  appendLog(config.missingLogPath, `RUN_SUMMARY | ${summaryLine}`);
 }
 
 main().catch((err) => {

@@ -9,3 +9,4 @@ This repository is created for the Ingestion automation work flow share by Talha
 4. Run: `npm start`
 
 Outputs are written to `~/Downloads` and missing entries are logged to `~/Downloads/output.txt`.
+Set `CLEAR_MISSING_LOG_ON_START=true` in `.env` to reset `output.txt` on every run (recommended).
