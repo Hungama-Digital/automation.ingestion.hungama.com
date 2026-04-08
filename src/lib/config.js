@@ -26,19 +26,12 @@ function createConfig(env, helpers = {}) {
     mdnQueryString: env.MDN_QUERY_STRING || 'duration=PT24H0M0S&cdn=s3&agent=application&cms=ms2&protocol=filedl',
     outputDir: expand(env.OUTPUT_DIR || joinPath(home(), 'Downloads')),
     outputExt: env.OUTPUT_EXT || 'wav',
-    missingLogPath: expand(env.MISSING_LOG_PATH || joinPath(home(), 'Downloads', 'output.txt')),
-    clearMissingLogOnStart: toBoolean(env.CLEAR_MISSING_LOG_ON_START, true),
+    missingLogDir: expand(env.MISSING_LOG_DIR || './logs'),
     ffmpegPath: env.FFMPEG_PATH || 'ffmpeg',
     ffmpegArgs: (env.FFMPEG_ARGS || '-t 00:00:30.0 -ar 8000 -ac 1 -c:a pcm_alaw')
       .split(' ')
       .filter(Boolean)
   };
-}
-
-function toBoolean(value, defaultValue) {
-  if (value === undefined || value === null || value === '') return defaultValue;
-  const normalized = String(value).trim().toLowerCase();
-  return normalized === '1' || normalized === 'true' || normalized === 'yes';
 }
 
 function validateConfig(config) {

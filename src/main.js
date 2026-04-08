@@ -19,6 +19,7 @@ const { mapWithConcurrency } = require('./lib/concurrency');
 const { buildOutputName } = require('./lib/filename');
 const { formatLotLog, appendLog } = require('./lib/logger');
 const { createSummary, updateSummary, formatRunHeader, formatRunSummary } = require('./lib/summary');
+const { buildRunLogPath } = require('./lib/run-log');
 
 const config = createConfig(process.env);
 validateConfig(config);
@@ -35,15 +36,14 @@ async function main() {
     fs.mkdirSync(config.outputDir, { recursive: true });
   }
 
-  const logDir = path.dirname(config.missingLogPath);
+  const logDir = path.isAbsolute(config.missingLogDir)
+    ? config.missingLogDir
+    : path.resolve(process.cwd(), config.missingLogDir);
   if (!fs.existsSync(logDir)) {
     fs.mkdirSync(logDir, { recursive: true });
   }
-  if (config.clearMissingLogOnStart) {
-    fs.writeFileSync(config.missingLogPath, '', 'utf8');
-  } else if (!fs.existsSync(config.missingLogPath)) {
-    fs.writeFileSync(config.missingLogPath, '', 'utf8');
-  }
+  config.missingLogPath = buildRunLogPath(logDir, new Date());
+  fs.writeFileSync(config.missingLogPath, '', 'utf8');
 
   const solrClient = createSolrClient({
     baseUrl: config.solrBaseUrl,

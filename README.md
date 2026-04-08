@@ -8,5 +8,6 @@ This repository is created for the Ingestion automation work flow share by Talha
 3. Install dependencies: `npm install`
 4. Run: `npm start`
 
-Outputs are written to `~/Downloads` and missing entries are logged to `~/Downloads/output.txt`.
-Set `CLEAR_MISSING_LOG_ON_START=true` in `.env` to reset `output.txt` on every run (recommended).
+Outputs are written to `~/Downloads`.
+Missing/error entries are logged to a timestamped file in the project `logs` folder (for example `logs/missing_entries_20260408_162530.log`).
+Set `MISSING_LOG_DIR` in `.env` to choose a different log directory.
